@@ -16,7 +16,7 @@ function AboutPreview() {
           confident modern devs.
         </p>
         <Link
-          to={"/about"}
+          to="/about"
           className="inline-block text-blue-400 hover:underline text-sm"
         >
           Learn More About Me
