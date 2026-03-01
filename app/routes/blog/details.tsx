@@ -28,8 +28,8 @@ function BlogPostDetailsPage({ loaderData }: Route.ComponentProps) {
       <h1 className="text-3xl font-bold text-blue-400 mb-2">
         {postMeta.title}
       </h1>
-      <p className="text-sm text-gray-400 mb-6" suppressHydrationWarning>
-        {new Date(postMeta.date).toLocaleDateString()}
+      <p className="text-sm text-gray-400 mb-6">
+        {new Date(postMeta.date).toDateString()}
       </p>
       <div className="max-w-none mb-12 prose prose-invert">
         <Markdown>{markdown}</Markdown>
