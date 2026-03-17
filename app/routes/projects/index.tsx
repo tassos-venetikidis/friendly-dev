@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Route } from "./+types/index";
-import type { Project } from "~/types";
+import type { Project, StrapiResponse, StrapiProject } from "~/types";
 import ProjectCard from "~/components/ProjectCard";
 import Pagination from "~/components/Pagination";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,10 +15,26 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({
   request,
 }: Route.LoaderArgs): Promise<{ projects: Project[] }> {
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/projects`);
-  const data = await res.json();
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/projects?populate=*`,
+  );
+  const json: StrapiResponse<StrapiProject> = await res.json();
 
-  return { projects: data };
+  const projects = json.data.map((project) => ({
+    id: project.id,
+    documentId: project.documentId,
+    title: project.title,
+    description: project.description,
+    featured: project.featured,
+    date: project.date,
+    category: project.category,
+    url: project.url,
+    image: project.image?.url
+      ? `${import.meta.env.VITE_STRAPI_URL}${project.image.url}`
+      : "images/no-image.png",
+  }));
+
+  return { projects };
 }
 
 function ProjectsPage({ loaderData }: Route.ComponentProps) {
