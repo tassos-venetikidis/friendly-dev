@@ -1,38 +1,58 @@
 import type { Route } from "./+types/details";
-import type { PostMeta } from "~/types";
+import type { Post, StrapiResponse, StrapiPost } from "~/types";
 import Markdown from "react-markdown";
 import { Link } from "react-router";
 
-export async function loader({ request, params }: Route.LoaderArgs) {
+export async function loader({
+  request,
+  params,
+}: Route.LoaderArgs): Promise<{ post: Post }> {
   const { slug } = params;
 
-  // Get the individual blog post metadata
-  const url = new URL("/posts-meta.json", request.url);
-  const res = await fetch(url.href);
+  // Get the individual blog post
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/posts?filters[slug][$eq]=${slug}&populate=image`,
+  );
   if (!res.ok) throw new Error("Failed to fetch data");
-  const index = await res.json();
-  const postMeta = index.find((post: PostMeta) => post.slug === slug);
-  if (!postMeta) throw new Response("Not found", { status: 404 });
 
-  // Get the individual raw markdown data from the corresponding file
-  const markdown = await import(`../../posts/${slug}.md?raw`);
+  const json: StrapiResponse<StrapiPost> = await res.json();
+  if (!json.data.length) throw new Response("Not found", { status: 404 });
 
-  return { postMeta, markdown: markdown.default };
+  const strapiPost = json.data[0];
+  const post = {
+    id: strapiPost.id,
+    documentId: strapiPost.documentId,
+    title: strapiPost.title,
+    slug: strapiPost.slug,
+    excerpt: strapiPost.excerpt,
+    body: strapiPost.body,
+    date: strapiPost.date,
+    image: strapiPost.image?.url
+      ? `${import.meta.env.VITE_STRAPI_URL}${strapiPost.image.url}`
+      : "images/no-image.png",
+  };
+
+  return { post };
 }
 
 function BlogPostDetailsPage({ loaderData }: Route.ComponentProps) {
-  const { postMeta, markdown } = loaderData;
+  const { post } = loaderData;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 bg-gray-900">
-      <h1 className="text-3xl font-bold text-blue-400 mb-2">
-        {postMeta.title}
-      </h1>
+      <h1 className="text-3xl font-bold text-blue-400 mb-2">{post.title}</h1>
       <p className="text-sm text-gray-400 mb-6">
-        {new Date(postMeta.date).toDateString()}
+        {new Date(post.date).toDateString()}
       </p>
+      {post.image && (
+        <img
+          src={post.image}
+          alt={post.title}
+          className="w-full h-64 object-cover rounded mb-4"
+        />
+      )}
       <div className="max-w-none mb-12 prose prose-invert">
-        <Markdown>{markdown}</Markdown>
+        <Markdown>{post.body}</Markdown>
       </div>
 
       <Link
