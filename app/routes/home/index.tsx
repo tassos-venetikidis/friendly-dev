@@ -1,6 +1,11 @@
 import type { Route } from "./+types/index";
-import type { Project, StrapiProject, StrapiResponse } from "~/types";
-import type { PostMeta } from "~/types";
+import type {
+  Project,
+  Post,
+  StrapiPost,
+  StrapiProject,
+  StrapiResponse,
+} from "~/types";
 import FeaturedProjects from "~/components/FeaturedProjects";
 import AboutPreview from "~/components/AboutPreview";
 import LatestBlogPosts from "~/components/LatestBlogPosts";
@@ -14,11 +19,11 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({
   request,
-}: Route.LoaderArgs): Promise<{ posts: PostMeta[]; projects: Project[] }> {
-  const url = new URL("/posts-meta.json", request.url);
-
+}: Route.LoaderArgs): Promise<{ posts: Post[]; projects: Project[] }> {
   const [postRes, projectRes] = await Promise.all([
-    fetch(url.href),
+    fetch(
+      `${import.meta.env.VITE_API_URL}/posts?populate=image&sort=date:desc`,
+    ),
     fetch(
       `${import.meta.env.VITE_API_URL}/projects?filters[featured][$eq]=true&populate=*`,
     ),
@@ -27,8 +32,10 @@ export async function loader({
   if (!postRes.ok || !projectRes.ok)
     throw new Error("Failed to fetch posts or projects.");
 
-  const [postJson, projectJson]: [PostMeta[], StrapiResponse<StrapiProject>] =
-    await Promise.all([postRes.json(), projectRes.json()]);
+  const [postJson, projectJson]: [
+    StrapiResponse<StrapiPost>,
+    StrapiResponse<StrapiProject>,
+  ] = await Promise.all([postRes.json(), projectRes.json()]);
 
   const projects = projectJson.data.map((project: StrapiProject) => ({
     id: project.id,
@@ -44,7 +51,20 @@ export async function loader({
       : "images/no-image.png",
   }));
 
-  return { posts: postJson, projects };
+  const posts = postJson.data.map((item: StrapiPost) => ({
+    id: item.id,
+    documentId: item.documentId,
+    slug: item.slug,
+    title: item.title,
+    excerpt: item.excerpt,
+    body: item.body,
+    date: item.date,
+    image: item.image?.url
+      ? `${import.meta.env.VITE_STRAPI_URL}${item.image.url}`
+      : "images/no-image.png",
+  }));
+
+  return { posts, projects };
 }
 
 function HomePage({ loaderData }: Route.ComponentProps) {
